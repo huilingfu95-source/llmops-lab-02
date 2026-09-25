@@ -3,24 +3,48 @@
 from __future__ import annotations
 
 from src.config import load_config
+from src.mock_provider import MockProvider
+from src.openai_provider import OpenAIProvider
+
+MAX_PROMPT_LENGTH = 10000
 
 
 def validate_prompt(prompt: str) -> str:
     """Validate and normalize a user prompt."""
-    # TODO: implement this function.
-    raise NotImplementedError("Implement validate_prompt().")
+    if not isinstance(prompt, str):
+        raise TypeError("Prompt must be a string.")
+
+    normalized = prompt.strip()
+    if not normalized:
+        raise ValueError("Prompt cannot be empty.")
+    if len(normalized) > MAX_PROMPT_LENGTH:
+        raise ValueError("Prompt exceeds the maximum allowed length.")
+    return normalized
 
 
 def create_provider(config: dict):
     """Select and instantiate the configured provider."""
-    # TODO: implement this function.
-    raise NotImplementedError("Implement create_provider().")
+    provider_name = (config.get("LLM_PROVIDER") or "mock").strip().lower()
+
+    if provider_name == "mock":
+        return MockProvider()
+
+    if provider_name == "openai":
+        api_key = (config.get("OPENAI_API_KEY") or "").strip()
+        model = (config.get("OPENAI_MODEL") or "").strip()
+        if not api_key or not model:
+            raise ValueError("OpenAI provider requires OPENAI_API_KEY and OPENAI_MODEL.")
+        return OpenAIProvider(api_key=api_key, model=model)
+
+    raise ValueError(f"Unsupported LLM provider: {provider_name}")
 
 
 def generate_response(prompt: str) -> dict:
     """Generate a normalized response for a user prompt."""
-    # TODO: implement this function.
-    raise NotImplementedError("Implement generate_response().")
+    validated_prompt = validate_prompt(prompt)
+    provider = create_provider(load_config())
+    response = provider.generate(validated_prompt)
+    return {"text": response.text, "provider": response.provider, "model": response.model}
 
 
 def main() -> None:
